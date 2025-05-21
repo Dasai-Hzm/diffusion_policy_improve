@@ -11,7 +11,7 @@ from diffusion_policy.model.diffusion.conditional_unet1d import ConditionalUnet1
 from diffusion_policy.model.diffusion.mask_generator import LowdimMaskGenerator
 from diffusion_policy.model.vision.multi_image_obs_encoder import MultiImageObsEncoder
 from diffusion_policy.common.pytorch_util import dict_apply
-from diffusion_policy.model.ctrl_pts_pred import BezierCurve ##
+from diffusion_policy.model.ctrl_pts_pred.ctrl_pts_pred import BezierCurve ##
 
 class DiffusionUnetImagePolicy(BaseImagePolicy):
     def __init__(self, 
