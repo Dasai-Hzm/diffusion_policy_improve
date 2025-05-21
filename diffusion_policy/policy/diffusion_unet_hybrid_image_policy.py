@@ -17,6 +17,7 @@ import robomimic.utils.obs_utils as ObsUtils
 import robomimic.models.base_nets as rmbn
 import diffusion_policy.model.vision.crop_randomizer as dmvc
 from diffusion_policy.common.pytorch_util import dict_apply, replace_submodules
+from diffusion_policy.model.ctrl_pts_pred import BezierCurve 
 
 
 class DiffusionUnetHybridImagePolicy(BaseImagePolicy):
@@ -240,6 +241,10 @@ class DiffusionUnetHybridImagePolicy(BaseImagePolicy):
             nobs_features = self.obs_encoder(this_nobs)
             # reshape back to B, Do
             global_cond = nobs_features.reshape(B, -1)
+            ###############################################################################
+            ctrl_pts = ctrl_pts_predictor.forward(global_cond).reshape(B, -1) 
+            global_cond = torch.cat([global_cond, ctrl_pts], dim=1)
+            ###############################################################################
             # empty data for action
             cond_data = torch.zeros(size=(B, T, Da), device=device, dtype=dtype)
             cond_mask = torch.zeros_like(cond_data, dtype=torch.bool)
@@ -249,7 +254,12 @@ class DiffusionUnetHybridImagePolicy(BaseImagePolicy):
             nobs_features = self.obs_encoder(this_nobs)
             # reshape back to B, To, Do
             nobs_features = nobs_features.reshape(B, To, -1)
-            cond_data = torch.zeros(size=(B, T, Da+Do), device=device, dtype=dtype)
+            ###############################################################################
+            ctrl_pts = ctrl_pts_predictor.forward(nobs_features[:,0,:]).unsqueeze(1).repeat(1, To, 1)
+            nobs_features = torch.cat([nobs_features, ctrl_pts], dim=-1)
+            Do_new = nobs_features.shape[-1]
+            cond_data = torch.zeros(size=(B, T, Da+Do_new), device=device, dtype=dtype)
+            ###############################################################################
             cond_mask = torch.zeros_like(cond_data, dtype=torch.bool)
             cond_data[:,:To,Da:] = nobs_features
             cond_mask[:,:To,Da:] = True
@@ -294,6 +304,8 @@ class DiffusionUnetHybridImagePolicy(BaseImagePolicy):
         global_cond = None
         trajectory = nactions
         cond_data = trajectory
+        ctrl_pts_out = None 
+
         if self.obs_as_global_cond:
             # reshape B, T, ... to B*T
             this_nobs = dict_apply(nobs, 
@@ -301,12 +313,22 @@ class DiffusionUnetHybridImagePolicy(BaseImagePolicy):
             nobs_features = self.obs_encoder(this_nobs)
             # reshape back to B, Do
             global_cond = nobs_features.reshape(batch_size, -1)
+            ###############################################################################
+            ctrl_pts = ctrl_pts_predictor.forward(global_cond).reshape(B, -1) 
+            ctrl_pts_out = ctrl_pts
+            global_cond = torch.cat([global_cond, ctrl_pts], dim=1)
+            ###############################################################################
         else:
             # reshape B, T, ... to B*T
             this_nobs = dict_apply(nobs, lambda x: x.reshape(-1, *x.shape[2:]))
             nobs_features = self.obs_encoder(this_nobs)
             # reshape back to B, T, Do
             nobs_features = nobs_features.reshape(batch_size, horizon, -1)
+            ###############################################################################
+            ctrl_pts_out = ctrl_pts_predictor.forward(nobs_features[:,0,:])
+            ctrl_pts = ctrl_pts_out.unsqueeze(1).repeat(1, To, 1)
+            nobs_features = torch.cat([nobs_features, ctrl_pts], dim=-1)
+            ###############################################################################
             cond_data = torch.cat([nactions, nobs_features], dim=-1)
             trajectory = cond_data.detach()
 
@@ -344,8 +366,15 @@ class DiffusionUnetHybridImagePolicy(BaseImagePolicy):
         else:
             raise ValueError(f"Unsupported prediction type {pred_type}")
 
-        loss = F.mse_loss(pred, target, reduction='none')
-        loss = loss * loss_mask.type(loss.dtype)
-        loss = reduce(loss, 'b ... -> b (...)', 'mean')
-        loss = loss.mean()
+        loss_diffusion = F.mse_loss(pred, target, reduction='none')
+        loss_diffusion = loss_diffusion * loss_mask.type(loss_diffusion.dtype)
+        loss_diffusion = reduce(loss_diffusion, 'b ... -> b (...)', 'mean')
+        loss_diffusion = loss_diffusion.mean()
+
+
+        action_extract = nactions[:, :, :9]
+        loss_rec = ctrl_pts_predictor.compute_loss(action_extract, ctrl_pts_out) 
+
+
+        loss = loss_diffusion + loss_rec
         return loss
