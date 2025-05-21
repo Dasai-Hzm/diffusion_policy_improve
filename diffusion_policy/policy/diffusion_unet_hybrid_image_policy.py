@@ -381,7 +381,7 @@ class DiffusionUnetHybridImagePolicy(BaseImagePolicy):
 
 
         action_extract = nactions[:, :, :9]
-        loss_rec = ctrl_pts_predictor.compute_loss(action_extract, ctrl_pts_out) 
+        loss_rec = self.ctrl_pts_predictor.compute_loss(action_extract, ctrl_pts_out) 
 
 
         loss = loss_diffusion + loss_rec
