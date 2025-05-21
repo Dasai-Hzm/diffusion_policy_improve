@@ -169,6 +169,13 @@ class DiffusionUnetHybridImagePolicy(BaseImagePolicy):
             num_inference_steps = noise_scheduler.config.num_train_timesteps
         self.num_inference_steps = num_inference_steps
 
+        self.ctrl_pts_predictor = BezierCurve(
+            input_dim=obs_feature_dim * n_obs_steps,
+            num_ctrl_pts=num_ctrl_pts,
+            action_dim=action_dim,
+            act_horizon=horizon
+        )
+
         print("Diffusion params: %e" % sum(p.numel() for p in self.model.parameters()))
         print("Vision params: %e" % sum(p.numel() for p in self.obs_encoder.parameters()))
     
