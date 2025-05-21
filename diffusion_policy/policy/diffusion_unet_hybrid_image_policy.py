@@ -37,6 +37,7 @@ class DiffusionUnetHybridImagePolicy(BaseImagePolicy):
             cond_predict_scale=True,
             obs_encoder_group_norm=False,
             eval_fixed_crop=False,
+            num_ctrl_pts=5,
             # parameters passed to step
             **kwargs):
         super().__init__()

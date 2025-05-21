@@ -29,7 +29,7 @@ class DiffusionUnetImagePolicy(BaseImagePolicy):
             n_groups=8,
             cond_predict_scale=True,
             # parameters passed to step
-            num_ctrl_pts = 5,
+            num_ctrl_pts=5,
             **kwargs):
         super().__init__()
 
