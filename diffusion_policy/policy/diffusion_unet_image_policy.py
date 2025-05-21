@@ -161,7 +161,7 @@ class DiffusionUnetImagePolicy(BaseImagePolicy):
             global_cond = nobs_features.reshape(B, -1)
 
             ###############################################################################
-            ctrl_pts = ctrl_pts_predictor.forward(global_cond).reshape(B, -1) 
+            ctrl_pts = self.ctrl_pts_predictor.forward(global_cond).reshape(B, -1) 
             global_cond = torch.cat([global_cond, ctrl_pts], dim=1)
             ###############################################################################
             # empty data for action
@@ -174,7 +174,7 @@ class DiffusionUnetImagePolicy(BaseImagePolicy):
             # reshape back to B, T, Do
             nobs_features = nobs_features.reshape(B, To, -1)
             ###############################################################################
-            ctrl_pts = ctrl_pts_predictor.forward(nobs_features[:,0,:]).unsqueeze(1).repeat(1, To, 1)
+            ctrl_pts = self.ctrl_pts_predictor.forward(nobs_features[:,0,:]).unsqueeze(1).repeat(1, To, 1)
             nobs_features = torch.cat([nobs_features, ctrl_pts], dim=-1)
             Do_new = nobs_features.shape[-1]
             cond_data = torch.zeros(size=(B, T, Da+Do_new), device=device, dtype=dtype)
@@ -233,7 +233,7 @@ class DiffusionUnetImagePolicy(BaseImagePolicy):
             # reshape back to B, Do
             global_cond = nobs_features.reshape(batch_size, -1)
             ###############################################################################
-            ctrl_pts = ctrl_pts_predictor.forward(global_cond).reshape(B, -1) 
+            ctrl_pts = self.ctrl_pts_predictor.forward(global_cond).reshape(B, -1) 
             ctrl_pts_out = ctrl_pts
             global_cond = torch.cat([global_cond, ctrl_pts], dim=1)
             ###############################################################################
@@ -244,7 +244,7 @@ class DiffusionUnetImagePolicy(BaseImagePolicy):
             # reshape back to B, T, Do
             nobs_features = nobs_features.reshape(batch_size, horizon, -1)
             ###############################################################################
-            ctrl_pts_out = ctrl_pts_predictor.forward(nobs_features[:,0,:])
+            ctrl_pts_out = self.ctrl_pts_predictor.forward(nobs_features[:,0,:])
             ctrl_pts = ctrl_pts_out.unsqueeze(1).repeat(1, To, 1)
             nobs_features = torch.cat([nobs_features, ctrl_pts], dim=-1)
             ###############################################################################
