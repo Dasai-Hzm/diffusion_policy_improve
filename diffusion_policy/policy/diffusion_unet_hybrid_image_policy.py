@@ -307,6 +307,8 @@ class DiffusionUnetHybridImagePolicy(BaseImagePolicy):
         batch_size = nactions.shape[0]
         horizon = nactions.shape[1]
 
+        print(nactions.shape)
+        
         # handle different ways of passing observation
         local_cond = None
         global_cond = None
