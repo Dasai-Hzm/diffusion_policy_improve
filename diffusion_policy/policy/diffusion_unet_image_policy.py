@@ -11,6 +11,7 @@ from diffusion_policy.model.diffusion.conditional_unet1d import ConditionalUnet1
 from diffusion_policy.model.diffusion.mask_generator import LowdimMaskGenerator
 from diffusion_policy.model.vision.multi_image_obs_encoder import MultiImageObsEncoder
 from diffusion_policy.common.pytorch_util import dict_apply
+from diffusion_policy.model.ctrl_pts_pred import BezierCurve ##
 
 class DiffusionUnetImagePolicy(BaseImagePolicy):
     def __init__(self, 
@@ -28,6 +29,7 @@ class DiffusionUnetImagePolicy(BaseImagePolicy):
             n_groups=8,
             cond_predict_scale=True,
             # parameters passed to step
+            num_ctrl_pts = 5,
             **kwargs):
         super().__init__()
 
@@ -43,7 +45,7 @@ class DiffusionUnetImagePolicy(BaseImagePolicy):
         global_cond_dim = None
         if obs_as_global_cond:
             input_dim = action_dim
-            global_cond_dim = obs_feature_dim * n_obs_steps
+            global_cond_dim = obs_feature_dim * n_obs_steps + num_ctrl_pts * 9 ##
 
         model = ConditionalUnet1D(
             input_dim=input_dim,
@@ -56,6 +58,7 @@ class DiffusionUnetImagePolicy(BaseImagePolicy):
             cond_predict_scale=cond_predict_scale
         )
 
+        self.global_img_cond_dim = obs_feature_dim * n_obs_steps ##
         self.obs_encoder = obs_encoder
         self.model = model
         self.noise_scheduler = noise_scheduler
@@ -78,6 +81,13 @@ class DiffusionUnetImagePolicy(BaseImagePolicy):
         if num_inference_steps is None:
             num_inference_steps = noise_scheduler.config.num_train_timesteps
         self.num_inference_steps = num_inference_steps
+        
+        self.ctrl_pts_predictor = BezierCurve(
+            input_dim=obs_feature_dim * n_obs_steps,
+            num_ctrl_pts=num_ctrl_pts,
+            action_dim=action_dim,
+            act_horizon=horizon
+        )
     
     # ========= inference  ============
     def conditional_sample(self, 
@@ -148,6 +158,12 @@ class DiffusionUnetImagePolicy(BaseImagePolicy):
             nobs_features = self.obs_encoder(this_nobs)
             # reshape back to B, Do
             global_cond = nobs_features.reshape(B, -1)
+            # 新加入
+            ###############################################################################
+            ctrl_pts_predictor = BezierCurve(self.global_img_cond_dim) 
+            ctrl_pts = ctrl_pts_predictor.forward(global_cond).reshape(B, -1) 
+            global_cond = torch.cat([global_cond, ctrl_pts], dim=1)
+            ###############################################################################
             # empty data for action
             cond_data = torch.zeros(size=(B, T, Da), device=device, dtype=dtype)
             cond_mask = torch.zeros_like(cond_data, dtype=torch.bool)
@@ -157,7 +173,13 @@ class DiffusionUnetImagePolicy(BaseImagePolicy):
             nobs_features = self.obs_encoder(this_nobs)
             # reshape back to B, T, Do
             nobs_features = nobs_features.reshape(B, To, -1)
-            cond_data = torch.zeros(size=(B, T, Da+Do), device=device, dtype=dtype)
+            ###############################################################################
+            ctrl_pts_predictor = BezierCurve(self.global_img_cond_dim)
+            ctrl_pts = ctrl_pts_predictor.forward(nobs_features[:,0,:]).unsqueeze(1).repeat(1, To, 1)
+            nobs_features = torch.cat([nobs_features, ctrl_pts], dim=-1)
+            Do_new = nobs_features.shape[-1]
+            cond_data = torch.zeros(size=(B, T, Da+Do_new), device=device, dtype=dtype)
+            ###############################################################################
             cond_mask = torch.zeros_like(cond_data, dtype=torch.bool)
             cond_data[:,:To,Da:] = nobs_features
             cond_mask[:,:To,Da:] = True
@@ -209,12 +231,22 @@ class DiffusionUnetImagePolicy(BaseImagePolicy):
             nobs_features = self.obs_encoder(this_nobs)
             # reshape back to B, Do
             global_cond = nobs_features.reshape(batch_size, -1)
+            ###############################################################################
+            ctrl_pts_predictor = BezierCurve(self.global_img_cond_dim) 
+            ctrl_pts = ctrl_pts_predictor.forward(global_cond).reshape(B, -1) 
+            global_cond = torch.cat([global_cond, ctrl_pts], dim=1)
+            ###############################################################################
         else:
             # reshape B, T, ... to B*T
             this_nobs = dict_apply(nobs, lambda x: x.reshape(-1, *x.shape[2:]))
             nobs_features = self.obs_encoder(this_nobs)
             # reshape back to B, T, Do
             nobs_features = nobs_features.reshape(batch_size, horizon, -1)
+            ###############################################################################
+            ctrl_pts_predictor = BezierCurve(self.global_img_cond_dim)
+            ctrl_pts = ctrl_pts_predictor.forward(nobs_features[:,0,:]).unsqueeze(1).repeat(1, To, 1)
+            nobs_features = torch.cat([nobs_features, ctrl_pts], dim=-1)
+            ###############################################################################
             cond_data = torch.cat([nactions, nobs_features], dim=-1)
             trajectory = cond_data.detach()
 
