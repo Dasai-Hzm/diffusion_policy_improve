@@ -322,7 +322,7 @@ class DiffusionUnetHybridImagePolicy(BaseImagePolicy):
             # reshape back to B, Do
             global_cond = nobs_features.reshape(batch_size, -1)
             ###############################################################################
-            ctrl_pts = self.ctrl_pts_predictor.forward(global_cond).reshape(B, -1) 
+            ctrl_pts = self.ctrl_pts_predictor.forward(global_cond).reshape(batch_size, -1) 
             ctrl_pts_out = ctrl_pts
             global_cond = torch.cat([global_cond, ctrl_pts], dim=1)
             ###############################################################################
