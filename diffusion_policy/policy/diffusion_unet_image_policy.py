@@ -294,5 +294,5 @@ class DiffusionUnetImagePolicy(BaseImagePolicy):
         loss_rec = ctrl_pts_predictor.compute_loss(action_extract, ctrl_pts_out) 
 
 
-        loss = loss_diffusion + alpha * loss_rec
+        loss = loss_diffusion + 0.1 * loss_rec
         return loss
