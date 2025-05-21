@@ -32,7 +32,8 @@ class BezierCurve(nn.Module):
         return self.predictor(x)
 
     def compute_loss(self, action, output):
-        B, T, Da = action.shape
-        ctrl_pts = output.view(B, Da, self.num_ctrl_pts)  
+        B = action.shape[0]
+        T = action.shape[1]
+        ctrl_pts = output.view(B, 9, self.num_ctrl_pts)  
         output_upsample = torch.einsum('kt,bdk->btd', self.coeff, ctrl_pts)
         return F.mse_loss(output_upsample, action)
