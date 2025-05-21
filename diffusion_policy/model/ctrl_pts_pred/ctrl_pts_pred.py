@@ -5,7 +5,7 @@ import math
 import torch.nn.functional as F
 
 class BezierCurve(nn.Module):
-    def __init__(self, input_dim, num_ctrl_pts=5, se3_dim=9, hidden_dim=256, act_horizon=1024):
+    def __init__(self, input_dim, num_ctrl_pts=5, se3_dim=2, hidden_dim=256, act_horizon=1024):
         super().__init__()
         self.input_dim = input_dim
         self.hidden_dim = hidden_dim
@@ -34,6 +34,6 @@ class BezierCurve(nn.Module):
     def compute_loss(self, action, output):
         B = action.shape[0]
         T = action.shape[1]
-        ctrl_pts = output.view(B, 9, self.num_ctrl_pts)  
+        ctrl_pts = output.view(B, 2, self.num_ctrl_pts)  
         output_upsample = torch.einsum('kt,bdk->btd', self.coeff, ctrl_pts)
         return F.mse_loss(output_upsample, action)

@@ -45,7 +45,7 @@ class DiffusionUnetImagePolicy(BaseImagePolicy):
         global_cond_dim = None
         if obs_as_global_cond:
             input_dim = action_dim
-            global_cond_dim = obs_feature_dim * n_obs_steps + num_ctrl_pts * 9 ##
+            global_cond_dim = obs_feature_dim * n_obs_steps + num_ctrl_pts * 2 ##
 
         model = ConditionalUnet1D(
             input_dim=input_dim,
@@ -85,7 +85,7 @@ class DiffusionUnetImagePolicy(BaseImagePolicy):
         self.ctrl_pts_predictor = BezierCurve(
             input_dim=obs_feature_dim * n_obs_steps,
             num_ctrl_pts=num_ctrl_pts,
-            se3_dim=9,
+            se3_dim=2,
             act_horizon=horizon
         )
         ######################################################
@@ -291,7 +291,7 @@ class DiffusionUnetImagePolicy(BaseImagePolicy):
         loss_diffusion = loss_diffusion.mean()
 
 
-        action_extract = nactions[:, :, :9]
+        action_extract = nactions[:, :, :2]
         loss_rec = self.ctrl_pts_predictor.compute_loss(action_extract, ctrl_pts_out) 
 
 
