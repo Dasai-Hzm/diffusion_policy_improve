@@ -85,7 +85,7 @@ class DiffusionUnetImagePolicy(BaseImagePolicy):
         self.ctrl_pts_predictor = BezierCurve(
             input_dim=obs_feature_dim * n_obs_steps,
             num_ctrl_pts=num_ctrl_pts,
-            action_dim=action_dim,
+            se3_dim=9,
             act_horizon=horizon
         )
         ######################################################

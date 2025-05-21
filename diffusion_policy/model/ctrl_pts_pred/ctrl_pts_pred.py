@@ -5,14 +5,14 @@ import math
 import torch.nn.functional as F
 
 class BezierCurve(nn.Module):
-    def __init__(self, input_dim, num_ctrl_pts=5, action_dim=9, hidden_dim=256, act_horizon=1024):
+    def __init__(self, input_dim, num_ctrl_pts=5, se3_dim=9, hidden_dim=256, act_horizon=1024):
         super().__init__()
         self.input_dim = input_dim
         self.hidden_dim = hidden_dim
         self.num_ctrl_pts = num_ctrl_pts
-        self.action_dim = action_dim
+        self.se3_dim = se3_dim
         self.act_horizon = act_horizon
-        self.output_dim = action_dim * num_ctrl_pts 
+        self.output_dim = se3_dim * num_ctrl_pts 
 
         self.predictor = nn.Sequential(
             nn.Linear(input_dim, hidden_dim),
