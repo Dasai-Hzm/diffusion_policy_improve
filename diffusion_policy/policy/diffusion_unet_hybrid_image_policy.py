@@ -39,6 +39,7 @@ class DiffusionUnetHybridImagePolicy(BaseImagePolicy):
             eval_fixed_crop=False,
             num_ctrl_pts=5,
             # parameters passed to step
+            action_load_horizon=64,
             **kwargs):
         super().__init__()
 
@@ -174,7 +175,7 @@ class DiffusionUnetHybridImagePolicy(BaseImagePolicy):
             input_dim=obs_feature_dim * n_obs_steps,
             num_ctrl_pts=num_ctrl_pts,
             se3_dim=2,
-            act_horizon=horizon
+            act_horizon=action_load_horizon
         )
 
         print("Diffusion params: %e" % sum(p.numel() for p in self.model.parameters()))

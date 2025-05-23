@@ -13,7 +13,8 @@ from diffusion_policy.common.normalize_util import get_image_range_normalizer
 class PushTImageDataset(BaseImageDataset):
     def __init__(self,
             zarr_path, 
-            horizon=1,
+            horizon=16,
+            action_load_horizon=64, ###
             pad_before=0,
             pad_after=0,
             seed=42,
@@ -44,12 +45,14 @@ class PushTImageDataset(BaseImageDataset):
         self.horizon = horizon
         self.pad_before = pad_before
         self.pad_after = pad_after
+        self.action_load_horizon = action_load_horizon
+        self.sampler_sequence_length = action_load_horizon
 
     def get_validation_dataset(self):
         val_set = copy.copy(self)
         val_set.sampler = SequenceSampler(
             replay_buffer=self.replay_buffer, 
-            sequence_length=self.horizon,
+            sequence_length=self.sampler_sequence_length,
             pad_before=self.pad_before, 
             pad_after=self.pad_after,
             episode_mask=~self.train_mask
@@ -93,7 +96,7 @@ class PushTImageDataset(BaseImageDataset):
 def test():
     import os
     zarr_path = os.path.expanduser('~/dev/diffusion_policy/data/pusht/pusht_cchi_v7_replay.zarr')
-    dataset = PushTImageDataset(zarr_path, horizon=16)
+    dataset = PushTImageDataset(zarr_path, horizon=16, action_load_horizon=64)
 
     # from matplotlib import pyplot as plt
     # normalizer = dataset.get_normalizer()
